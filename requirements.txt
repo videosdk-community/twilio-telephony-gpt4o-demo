@@ -1,0 +1,6 @@
+videosdk-agents
+videosdk-plugins-openai
+asyncio
+scipy
+python-dotenv
+twilio
