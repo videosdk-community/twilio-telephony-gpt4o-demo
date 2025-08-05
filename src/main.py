@@ -1,6 +1,7 @@
 import asyncio
 import aiohttp
 from videosdk.agents import Agent, AgentSession, RealTimePipeline, function_tool, MCPServerStdio, MCPServerHTTP, JobContext, RoomOptions, WorkerJob
+from videosdk.plugins.google import GeminiRealtime, GeminiLiveConfig
 from videosdk.plugins.openai import OpenAIRealtime, OpenAIRealtimeConfig
 from openai.types.beta.realtime.session import InputAudioTranscription, TurnDetection
 from pathlib import Path
@@ -83,23 +84,32 @@ class MyVoiceAgent(Agent):
 
 
 async def start_session(context: JobContext):
-    model = OpenAIRealtime(
-        model="gpt-4o-realtime-preview",
-        # When OPENAI_API_KEY is set in .env - DON'T pass api_key parameter
-        # api_key="sk-proj-XXXXXXXXXXXXXXXXXXXX",
-        config=OpenAIRealtimeConfig(
-            voice="alloy", # alloy, ash, ballad, coral, echo, fable, onyx, nova, sage, shimmer, and verse
-            modalities=["text", "audio"],
-            input_audio_transcription=InputAudioTranscription(model="whisper-1"),
-            turn_detection=TurnDetection(
-                type="server_vad",
-                threshold=0.5,
-                prefix_padding_ms=300,
-                silence_duration_ms=200,
-            ),
-            tool_choice="auto",
+    model = GeminiRealtime(
+        model="gemini-2.0-flash-live-001",
+        # When GOOGLE_API_KEY is set in .env - DON'T pass api_key parameter
+        # api_key="AIXXXXXXXXXXXXXXXXXXXX", 
+        config=GeminiLiveConfig(
+            voice="Leda", # Puck, Charon, Kore, Fenrir, Aoede, Leda, Orus, and Zephyr.
+            response_modalities=["AUDIO"]
         )
     )
+    # model = OpenAIRealtime(
+    #     model="gpt-4o-realtime-preview",
+    #     # When OPENAI_API_KEY is set in .env - DON'T pass api_key parameter
+    #     # api_key="sk-proj-XXXXXXXXXXXXXXXXXXXX",
+    #     config=OpenAIRealtimeConfig(
+    #         voice="alloy", # alloy, ash, ballad, coral, echo, fable, onyx, nova, sage, shimmer, and verse
+    #         modalities=["text", "audio"],
+    #         input_audio_transcription=InputAudioTranscription(model="whisper-1"),
+    #         turn_detection=TurnDetection(
+    #             type="server_vad",
+    #             threshold=0.5,
+    #             prefix_padding_ms=300,
+    #             silence_duration_ms=200,
+    #         ),
+    #         tool_choice="auto",
+    #     )
+    # )
     pipeline = RealTimePipeline(model=model)
     session = AgentSession(
         agent=MyVoiceAgent(),
@@ -118,8 +128,8 @@ def make_context() -> JobContext:
     room_options = RoomOptions(
         room_id=os.getenv("VIDEOSDK_MEETING_ID"), # Replace it with your actual meetingID
         auth_token = os.getenv("VIDEOSDK_AUTH_TOKEN"), # When VIDEOSDK_AUTH_TOKEN is set in .env - DON'T include videosdk_auth
-        name="OpenAI Agent", 
-        playground=True,
+        name="AI Agent", 
+        playground=False,
     )
     
     return JobContext(room_options=room_options)

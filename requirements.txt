@@ -1,5 +1,6 @@
 videosdk-agents
 videosdk-plugins-openai
+videosdk-plugins-google
 asyncio
 scipy
 python-dotenv
