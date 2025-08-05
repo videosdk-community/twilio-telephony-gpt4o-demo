@@ -1,81 +1,130 @@
-from voice_agent import VoiceAgent
-from videosdk.agents import AgentSession
-from videosdk.agents import RealTimePipeline
-from videosdk.plugins.openai import OpenAIRealtime
 import asyncio
-import dotenv
-import os
-import logging
-import signal
-from typing import Dict, Any
+import aiohttp
+from videosdk.agents import Agent, AgentSession, RealTimePipeline, function_tool, MCPServerStdio, MCPServerHTTP, JobContext, RoomOptions, WorkerJob
+from videosdk.plugins.openai import OpenAIRealtime, OpenAIRealtimeConfig
+from openai.types.beta.realtime.session import InputAudioTranscription, TurnDetection
+from pathlib import Path
+import os  
 
-# Configure minimal logging
-logging.basicConfig(
-    level=logging.WARNING,  # Only show warnings and errors
-    format='%(levelname)s: %(message)s'  # Simplified format
-)
-logger = logging.getLogger(__name__)
 
-# Load environment variables
-dotenv.load_dotenv()
+@function_tool
+async def get_weather(
+    latitude: str,
+    longitude: str,
+):
+        """Called when the user asks about the weather. This function will return the weather for
+        the given location. When given a location, please estimate the latitude and longitude of the
+        location and do not ask the user for them.
 
-# Environment variables
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-VIDEOSDK_MEETING_ID = os.getenv("VIDEOSDK_MEETING_ID")
-VIDEOSDK_AUTH_TOKEN = os.getenv("VIDEOSDK_AUTH_TOKEN")
+        Args:
+            latitude: The latitude of the location
+            longitude: The longitude of the location
+        """
+        print("###Getting weather for", latitude, longitude)
+        # logger.info(f"getting weather for {latitude}, {longitude}")
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&current=temperature_2m"
+        weather_data = {}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    print("###Weather data", data)
+                    weather_data = {
+                        "temperature": data["current"]["temperature_2m"],
+                        "temperature_unit": "Celsius",
+                    }
+                else:
+                    raise Exception(
+                        f"Failed to get weather data, status code: {response.status}"
+                    )
 
-# Required environment variables
-REQUIRED_ENV_VARS = {
-    "OPENAI_API_KEY": OPENAI_API_KEY,
-    "VIDEOSDK_MEETING_ID": VIDEOSDK_MEETING_ID,
-    "VIDEOSDK_AUTH_TOKEN": VIDEOSDK_AUTH_TOKEN
-}
+        return weather_data
 
-def secure_log_error(error_msg: str, error: Exception) -> None:
-    """Log error messages without exposing sensitive information."""
-    safe_msg = error_msg.replace(str(OPENAI_API_KEY), "[REDACTED]")
-    safe_msg = safe_msg.replace(str(VIDEOSDK_AUTH_TOKEN), "[REDACTED]")
-    logger.error(f"{safe_msg}: {type(error).__name__}")
 
-def validate_environment() -> None:
-    """Validate that all required environment variables are set."""
-    missing_vars = [var for var, value in REQUIRED_ENV_VARS.items() if not value]
-    if missing_vars:
-        raise EnvironmentError(f"Missing required environment variables: {', '.join(missing_vars)}")
+class MyVoiceAgent(Agent):
+    def __init__(self):
 
-def make_context() -> Dict[str, Any]:
-    """Create the context dictionary for the agent session."""
-    return {
-        "name": "VoiceAgent",
-        "meetingId": VIDEOSDK_MEETING_ID,
-        "videosdk_auth": VIDEOSDK_AUTH_TOKEN
-    }
+        super().__init__(
+            instructions="You Are VideoSDK's Voice Agent.You are a helpful voice assistant that can answer questions and help with tasks.",
+            tools=[get_weather],
+        )
 
-async def main() -> None:
-    """Main function to run the voice agent."""
+    async def on_enter(self) -> None:
+        await self.session.say("Hello, how can I help you today?")
+    
+    async def on_exit(self) -> None:
+        await self.session.say("Goodbye!")
+        
+    # Static test function
+    @function_tool
+    async def get_horoscope(self, sign: str) -> dict:
+        """Get today's horoscope for a given zodiac sign.
+
+        Args:
+            sign: The zodiac sign (e.g., Aries, Taurus, Gemini, etc.)
+        """
+        horoscopes = {
+            "Aries": "Today is your lucky day!",
+            "Taurus": "Focus on your goals today.",
+            "Gemini": "Communication will be important today.",
+        }
+        return {
+            "sign": sign,
+            "horoscope": horoscopes.get(sign, "The stars are aligned for you today!"),
+        }
+    
+    @function_tool
+    async def end_call(self) -> None:
+        """End the call upon request by the user"""
+        await self.session.say("Goodbye!")
+        await asyncio.sleep(1)
+        await self.session.leave()
+        
+
+
+async def start_session(context: JobContext):
+    model = OpenAIRealtime(
+        model="gpt-4o-realtime-preview",
+        # When OPENAI_API_KEY is set in .env - DON'T pass api_key parameter
+        # api_key="sk-proj-XXXXXXXXXXXXXXXXXXXX",
+        config=OpenAIRealtimeConfig(
+            voice="alloy", # alloy, ash, ballad, coral, echo, fable, onyx, nova, sage, shimmer, and verse
+            modalities=["text", "audio"],
+            input_audio_transcription=InputAudioTranscription(model="whisper-1"),
+            turn_detection=TurnDetection(
+                type="server_vad",
+                threshold=0.5,
+                prefix_padding_ms=300,
+                silence_duration_ms=200,
+            ),
+            tool_choice="auto",
+        )
+    )
+    pipeline = RealTimePipeline(model=model)
+    session = AgentSession(
+        agent=MyVoiceAgent(),
+        pipeline=pipeline
+    )
+
     try:
-        validate_environment()
-        
-        openai_model = OpenAIRealtime(
-            model="gpt-4o-realtime-preview",
-            api_key=OPENAI_API_KEY
-        )
-        
-        pipeline = RealTimePipeline(model=openai_model)
-        
-        session = AgentSession(
-            agent=VoiceAgent(),
-            pipeline=pipeline,
-            context=make_context()
-        )
-        
+        await context.connect()
         await session.start()
         await asyncio.Event().wait()
-        
-    except Exception as e:
-        secure_log_error("Error", e)
+    finally:
+        await session.close()
+        await context.shutdown()
+
+def make_context() -> JobContext:
+    room_options = RoomOptions(
+        room_id=os.getenv("VIDEOSDK_MEETING_ID"), # Replace it with your actual meetingID
+        auth_token = os.getenv("VIDEOSDK_AUTH_TOKEN"), # When VIDEOSDK_AUTH_TOKEN is set in .env - DON'T include videosdk_auth
+        name="OpenAI Agent", 
+        playground=True,
+    )
+    
+    return JobContext(room_options=room_options)
+
 
 if __name__ == "__main__":
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(main())
+    job = WorkerJob(entrypoint=start_session, jobctx=make_context)
+    job.start()
