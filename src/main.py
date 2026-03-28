@@ -1,12 +1,14 @@
 import asyncio
 import aiohttp
-from videosdk.agents import Agent, AgentSession, RealTimePipeline, function_tool, MCPServerStdio, MCPServerHTTP, JobContext, RoomOptions, WorkerJob
+from videosdk.agents import Agent, AgentSession, Pipeline, function_tool, MCPServerStdio, MCPServerHTTP, JobContext, RoomOptions, WorkerJob
 from videosdk.plugins.google import GeminiRealtime, GeminiLiveConfig
 from videosdk.plugins.openai import OpenAIRealtime, OpenAIRealtimeConfig
 from openai.types.beta.realtime.session import InputAudioTranscription, TurnDetection
 from pathlib import Path
 import os  
 
+import logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", handlers=[logging.StreamHandler()])
 
 @function_tool
 async def get_weather(
@@ -85,7 +87,7 @@ class MyVoiceAgent(Agent):
 
 async def start_session(context: JobContext):
     model = GeminiRealtime(
-        model="gemini-2.0-flash-live-001",
+        model="gemini-3.1-flash-live-preview",
         # When GOOGLE_API_KEY is set in .env - DON'T pass api_key parameter
         # api_key="AIXXXXXXXXXXXXXXXXXXXX", 
         config=GeminiLiveConfig(
@@ -110,23 +112,17 @@ async def start_session(context: JobContext):
     #         tool_choice="auto",
     #     )
     # )
-    pipeline = RealTimePipeline(model=model)
+    pipeline = Pipeline(llm=model)
     session = AgentSession(
         agent=MyVoiceAgent(),
         pipeline=pipeline
     )
 
-    try:
-        await context.connect()
-        await session.start()
-        await asyncio.Event().wait()
-    finally:
-        await session.close()
-        await context.shutdown()
+    await session.start(wait_for_participant=True, run_until_shutdown=True)
 
 def make_context() -> JobContext:
     room_options = RoomOptions(
-        room_id=os.getenv("VIDEOSDK_MEETING_ID"), # Replace it with your actual meetingID
+        room_id=os.getenv("VIDEOSDK_ROOM_ID"), # Replace it with your actual room_id
         auth_token = os.getenv("VIDEOSDK_AUTH_TOKEN"), # When VIDEOSDK_AUTH_TOKEN is set in .env - DON'T include videosdk_auth
         name="AI Agent", 
         playground=False,

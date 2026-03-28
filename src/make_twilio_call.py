@@ -23,7 +23,7 @@ dotenv.load_dotenv()
 TWILIO_SID = os.getenv("TWILIO_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
-VIDEOSDK_MEETING_ID = os.getenv("VIDEOSDK_MEETING_ID")
+VIDEOSDK_ROOM_ID = os.getenv("VIDEOSDK_ROOM_ID")
 VIDEOSDK_SIP_USERNAME = os.getenv("VIDEOSDK_SIP_USERNAME")
 VIDEOSDK_SIP_PASSWORD = os.getenv("VIDEOSDK_SIP_PASSWORD")
 TO_PHONE_NUMBER = os.getenv("TO_PHONE_NUMBER")
@@ -33,7 +33,7 @@ required_env_vars = {
     "TWILIO_SID": TWILIO_SID,
     "TWILIO_AUTH_TOKEN": TWILIO_AUTH_TOKEN,
     "TWILIO_PHONE_NUMBER": TWILIO_PHONE_NUMBER,
-    "VIDEOSDK_MEETING_ID": VIDEOSDK_MEETING_ID,
+    "VIDEOSDK_ROOM_ID": VIDEOSDK_ROOM_ID,
     "VIDEOSDK_SIP_USERNAME": VIDEOSDK_SIP_USERNAME,
     "VIDEOSDK_SIP_PASSWORD": VIDEOSDK_SIP_PASSWORD,
     "TO_PHONE_NUMBER": TO_PHONE_NUMBER,
@@ -56,7 +56,7 @@ def outbound_call_app() -> str:
     response = VoiceResponse()
     dial = response.dial()
     dial.sip(
-        f"sip:{VIDEOSDK_MEETING_ID}@sip.videosdk.live",
+        f"sip:{VIDEOSDK_ROOM_ID}@sip.videosdk.live",
         username=VIDEOSDK_SIP_USERNAME,
         password=VIDEOSDK_SIP_PASSWORD,
     )

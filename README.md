@@ -66,7 +66,7 @@ A Python-based demonstration project that showcases how to build an AI voice age
    Then edit `.env` with your credentials:
    ```bash
    OPENAI_API_KEY="your-openai-key"
-   VIDEOSDK_MEETING_ID="your-meeting-id"
+   VIDEOSDK_ROOM_ID="<room_id>"
    VIDEOSDK_AUTH_TOKEN="your-auth-token"
    VIDEOSDK_SIP_USERNAME="your-sip-username"
    VIDEOSDK_SIP_PASSWORD="your-sip-password"
@@ -113,6 +113,18 @@ A Python-based demonstration project that showcases how to build an AI voice age
   - scipy
   - python-dotenv
   - twilio
+
+## VideoSDK Agents
+
+Build and deploy production-ready AI voice & video agents with [VideoSDK](https://videosdk.live). This repo is your central hub for agent templates, feature examples, and everything you need to ship real-world AI-powered applications.
+
+| Resource | Description |
+|---|---|
+| 🚀 [Use Case Examples](https://github.com/videosdk-live/agents/tree/main/use_case_examples) | Production-ready templates across Customer Support, Healthcare, Tech Support & more |
+| ⚡ [Feature Examples](https://github.com/videosdk-live/agents/tree/main/examples) | Always up-to-date examples showcasing the latest VideoSDK Agent features |
+| 📖 [AI Agents Docs](https://docs.videosdk.live/ai_agents/introduction) | Full guides, concepts & API references to get you started |
+
+> ⭐ If this helps you, star this repo and [`videosdk-live/agents`](https://github.com/videosdk-live/agents) — it keeps us motivated to ship more!
 
 ## License
 
