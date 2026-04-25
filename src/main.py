@@ -123,8 +123,7 @@ async def start_session(context: JobContext):
 def make_context() -> JobContext:
     room_options = RoomOptions(
         room_id=os.getenv("VIDEOSDK_ROOM_ID"), # Replace it with your actual room_id
-        auth_token = os.getenv("VIDEOSDK_AUTH_TOKEN"), # When VIDEOSDK_AUTH_TOKEN is set in .env - DON'T include videosdk_auth
-        name="AI Agent", 
+        name="AI Agent",
         playground=False,
     )
     

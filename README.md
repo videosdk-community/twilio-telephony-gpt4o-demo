@@ -67,7 +67,8 @@ A Python-based demonstration project that showcases how to build an AI voice age
    ```bash
    OPENAI_API_KEY="your-openai-key"
    VIDEOSDK_ROOM_ID="<room_id>"
-   VIDEOSDK_AUTH_TOKEN="your-auth-token"
+   VIDEOSDK_API_KEY="your-api_key"
+   VIDEOSDK_SECRET_KEY="your-secret_key"
    VIDEOSDK_SIP_USERNAME="your-sip-username"
    VIDEOSDK_SIP_PASSWORD="your-sip-password"
    TWILIO_SID="your-twilio-sid"
